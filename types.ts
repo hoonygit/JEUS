@@ -6,6 +6,39 @@ export enum CoveringType {
     TYVEK = '타이벡',
 }
 
+export enum ConsultationCategory {
+    CONSULTATION = '상담',
+    PRUNING = '전정',
+    PESTICIDE_FERTILIZER = '농약/비료',
+    IRRIGATION = '관수',
+    MULCHING = '멀칭',
+    HARVEST = '수확',
+    ETC = '기타',
+}
+
+export interface ConsultationLog {
+    id: string;
+    date: string;
+    category: ConsultationCategory | '';
+    content: string;
+    notes: string;
+}
+
+export interface CorporateFarmDetails {
+    year: number;
+    consultationDate: string;
+    estimatedQuantity: number;
+    contractedQuantity: number;
+    isContracted: boolean;
+    specialNotes: string;
+    contractDate?: string;
+    downPayment?: number;
+    balanceDueDate?: string;
+    balancePayment?: number;
+    mulchingWorkDate?: string;
+    consultationLogs: ConsultationLog[];
+}
+
 export interface BasicFarmInfo {
     id: string;
     name: string;
@@ -14,6 +47,7 @@ export interface BasicFarmInfo {
     areaPyeong: number;
     cultivar: string;
     treeCount: number;
+    isCorporate: boolean;
 }
 
 export interface FacilityInfo {
@@ -67,4 +101,5 @@ export interface Farm {
     supportPrograms: SupportProgram[];
     serviceInfo: ServiceInfo;
     annualData: AnnualData[];
+    corporateFarmDetails?: CorporateFarmDetails;
 }

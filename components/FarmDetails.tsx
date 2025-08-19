@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Farm } from '../types';
 import { XIcon } from './icons';
@@ -22,7 +23,7 @@ const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({ la
 );
 
 const FarmDetails: React.FC<FarmDetailsProps> = ({ farm, onClose }) => {
-    const { basicInfo, facilityInfo, serviceInfo, supportPrograms, annualData } = farm;
+    const { basicInfo, facilityInfo, serviceInfo, supportPrograms, annualData, corporateFarmDetails } = farm;
     const formatBoolean = (value: boolean) => value ? <span className="font-semibold text-green-600">Y</span> : <span className="font-semibold text-red-600">N</span>;
 
     return (
@@ -56,8 +57,60 @@ const FarmDetails: React.FC<FarmDetailsProps> = ({ farm, onClose }) => {
                             <DetailItem label="면적(평)">{basicInfo.areaPyeong.toLocaleString()}</DetailItem>
                             <DetailItem label="품종">{basicInfo.cultivar || '-'}</DetailItem>
                             <DetailItem label="과수본수">{basicInfo.treeCount.toLocaleString()} 주</DetailItem>
+                            <DetailItem label="기업농">{formatBoolean(basicInfo.isCorporate)}</DetailItem>
                         </div>
                     </DetailSection>
+
+                    {basicInfo.isCorporate && corporateFarmDetails && (
+                         <>
+                         <DetailSection title="기업농 관련 정보">
+                            <div className="grid grid-cols-2 gap-y-4 md:grid-cols-3 gap-x-6">
+                               <DetailItem label="상담년도">{corporateFarmDetails.year}</DetailItem>
+                               <DetailItem label="상담일">{corporateFarmDetails.consultationDate || '-'}</DetailItem>
+                               <DetailItem label="예상관수">{corporateFarmDetails.estimatedQuantity.toLocaleString()} 관</DetailItem>
+                               <DetailItem label="계약관수">{corporateFarmDetails.contractedQuantity.toLocaleString()} 관</DetailItem>
+                               <DetailItem label="계약여부">{formatBoolean(corporateFarmDetails.isContracted)}</DetailItem>
+                               <DetailItem label="특이사항">{corporateFarmDetails.specialNotes || '-'}</DetailItem>
+                            </div>
+                            {corporateFarmDetails.isContracted && (
+                                <div className="mt-4 p-4 border rounded-md bg-gray-50 grid grid-cols-2 gap-y-4 md:grid-cols-3 gap-x-6">
+                                    <h4 className="col-span-full font-semibold text-gray-700">계약 상세</h4>
+                                    <DetailItem label="계약일">{corporateFarmDetails.contractDate || '-'}</DetailItem>
+                                    <DetailItem label="계약금">{corporateFarmDetails.downPayment?.toLocaleString() || 0} 원</DetailItem>
+                                    <DetailItem label="잔금일">{corporateFarmDetails.balanceDueDate || '-'}</DetailItem>
+                                    <DetailItem label="잔금">{corporateFarmDetails.balancePayment?.toLocaleString() || 0} 원</DetailItem>
+                                    <DetailItem label="멀칭작업일">{corporateFarmDetails.mulchingWorkDate || '-'}</DetailItem>
+                                </div>
+                            )}
+                         </DetailSection>
+                         {corporateFarmDetails.consultationLogs && corporateFarmDetails.consultationLogs.length > 0 && (
+                            <DetailSection title="상담 일지 내역">
+                                <div className="overflow-x-auto border rounded-lg">
+                                    <table className="w-full text-left table-auto">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-sm font-semibold text-gray-600">날짜</th>
+                                                <th className="px-4 py-2 text-sm font-semibold text-gray-600">구분</th>
+                                                <th className="px-4 py-2 text-sm font-semibold text-gray-600">내용</th>
+                                                <th className="px-4 py-2 text-sm font-semibold text-gray-600">비고</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {corporateFarmDetails.consultationLogs.map((log) => (
+                                                <tr key={log.id}>
+                                                    <td className="px-4 py-2 whitespace-nowrap">{log.date}</td>
+                                                    <td className="px-4 py-2">{log.category}</td>
+                                                    <td className="px-4 py-2">{log.content}</td>
+                                                    <td className="px-4 py-2 text-gray-600">{log.notes}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </DetailSection>
+                         )}
+                         </>
+                    )}
 
                     <DetailSection title="시설 정보">
                         <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4 gap-x-6">

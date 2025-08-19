@@ -1,47 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Farm, CoveringType } from './types';
+import { Farm } from './types';
 import FarmList from './components/FarmList';
 import FarmForm from './components/FarmForm';
 import FarmDetails from './components/FarmDetails';
-
-const initialFarms: Farm[] = [
-    {
-        id: 'farm-1',
-        basicInfo: { id: 'basic-1', name: '햇살가득 농원', contact: '010-1234-5678', address: '제주특별자치도 서귀포시', areaPyeong: 2000, cultivar: '한라봉', treeCount: 500 },
-        facilityInfo: { slope: '10도', plantingDistance: '5m x 3m', hasCovering: true, coveringType: CoveringType.TYVEK, hasPower: true, hasInternet: true, hasUmbrellaSystem: false, hasDripHose: true, hasSprinkler: true, hasWindbreak: true, hasOpener: true },
-        supportPrograms: [
-            { id: 'sp-1', year: 2023, projectName: '스마트팜 보급사업', projectDescription: '온습도 센서 설치', localGovtFund: 5000000, selfFund: 2000000, isSelected: true }
-        ],
-        serviceInfo: { jacheongbiId: 'sunshine_farm', jacheongbiPw: 'password123', useSugarService: true, sugarMeterInfo: 'H-500 모델', useSensorService: true, sensorInfo: 'SKT 스마트팜' },
-        annualData: [
-            { id: 'ad-1', year: 2023, avgBrix: 14.5, hasAlternateBearing: false, estimatedYield: 1000, pricePerGwan: 50000, shippingSeason: '1월-2월', notes: '품질 우수' }
-        ]
-    },
-    {
-        id: 'farm-2',
-        basicInfo: { id: 'basic-2', name: '제주오름 농장', contact: '010-9876-5432', address: '제주특별자치도 제주시', areaPyeong: 1500, cultivar: '천혜향', treeCount: 400 },
-        facilityInfo: { slope: '5도', plantingDistance: '4m x 3m', hasCovering: false, hasPower: true, hasInternet: false, hasUmbrellaSystem: false, hasDripHose: true, hasSprinkler: false, hasWindbreak: true, hasOpener: false },
-        supportPrograms: [],
-        serviceInfo: { jacheongbiId: 'oreum_farm', jacheongbiPw: 'password123', useSugarService: false, useSensorService: false },
-        annualData: [
-             { id: 'ad-2', year: 2023, avgBrix: 13.8, hasAlternateBearing: true, estimatedYield: 700, pricePerGwan: 45000, shippingSeason: '2월-3월', notes: '해거리로 생산량 감소' }
-        ]
-    }
-];
+import { farmApi } from './services/api';
 
 const App: React.FC = () => {
-    const [farms, setFarms] = useState<Farm[]>(() => {
-        const savedFarms = localStorage.getItem('citrusFarms');
-        return savedFarms ? JSON.parse(savedFarms) : initialFarms;
-    });
-
+    const [farms, setFarms] = useState<Farm[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [view, setView] = useState<'list' | 'form'>('list');
     const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
     const [viewingFarm, setViewingFarm] = useState<Farm | null>(null);
 
     useEffect(() => {
-        localStorage.setItem('citrusFarms', JSON.stringify(farms));
-    }, [farms]);
+        const fetchFarms = async () => {
+            try {
+                const data = await farmApi.getAllFarms();
+                setFarms(data);
+            } catch (error) {
+                console.error("농가 데이터를 불러오는데 실패했습니다.", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchFarms();
+    }, []);
 
     const handleAddNew = () => {
         setEditingFarm(null);
@@ -53,21 +36,34 @@ const App: React.FC = () => {
         setView('form');
     };
 
-    const handleDelete = (farmId: string) => {
-        setFarms(farms.filter(farm => farm.id !== farmId));
+    const handleDelete = async (farmId: string) => {
+        try {
+            await farmApi.deleteFarm(farmId);
+            setFarms(prevFarms => prevFarms.filter(farm => farm.id !== farmId));
+        } catch (error) {
+            console.error("농가 정보 삭제에 실패했습니다.", error);
+        }
     };
 
-    const handleSave = (farmData: Farm) => {
-        const index = farms.findIndex(f => f.id === farmData.id);
-        if (index > -1) {
-            const updatedFarms = [...farms];
-            updatedFarms[index] = farmData;
-            setFarms(updatedFarms);
-        } else {
-            setFarms([...farms, farmData]);
+    const handleSave = async (farmData: Farm) => {
+        try {
+            setIsLoading(true);
+            const savedFarm = await farmApi.saveFarm(farmData);
+            setFarms(currentFarms => {
+                const isUpdate = currentFarms.some(f => f.id === savedFarm.id);
+                if (isUpdate) {
+                    return currentFarms.map(farm => farm.id === savedFarm.id ? savedFarm : farm);
+                } else {
+                    return [...currentFarms, savedFarm];
+                }
+            });
+        } catch (error) {
+            console.error("농가 정보 저장에 실패했습니다.", error);
+        } finally {
+            setView('list');
+            setEditingFarm(null);
+            setIsLoading(false);
         }
-        setView('list');
-        setEditingFarm(null);
     };
 
     const handleCancel = () => {
@@ -82,6 +78,74 @@ const App: React.FC = () => {
     const handleCloseDetails = () => {
         setViewingFarm(null);
     };
+
+    const handleBackup = async () => {
+        try {
+            const currentFarms = await farmApi.getAllFarms();
+            const jsonString = JSON.stringify(currentFarms, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `back_${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("데이터 백업에 실패했습니다.", error);
+            alert("데이터 백업 중 오류가 발생했습니다.");
+        }
+    };
+
+    const handleRestore = (file: File) => {
+        if (!file) return;
+        
+        const confirmation = window.confirm("데이터를 복원하시겠습니까? 현재 모든 데이터가 선택한 파일의 내용으로 대체됩니다. 이 작업은 되돌릴 수 없습니다.");
+        if (!confirmation) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const content = event.target?.result;
+                if (typeof content !== 'string') throw new Error("파일을 읽을 수 없습니다.");
+                
+                const restoredFarms: Farm[] = JSON.parse(content);
+                
+                if (!Array.isArray(restoredFarms)) {
+                    throw new Error("JSON 파일의 형식이 올바르지 않습니다. 최상위 요소는 배열이어야 합니다.");
+                }
+
+                setIsLoading(true);
+                await farmApi.replaceAllFarms(restoredFarms);
+                const updatedFarms = await farmApi.getAllFarms();
+                setFarms(updatedFarms);
+                alert("데이터 복원이 완료되었습니다.");
+
+            } catch (error) {
+                console.error("데이터 복원에 실패했습니다.", error);
+                alert(`데이터 복원 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        reader.onerror = () => {
+             alert("파일을 읽는 중 오류가 발생했습니다.");
+        }
+        reader.readAsText(file);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-orange-500 mx-auto"></div>
+                    <p className="text-xl text-gray-700 mt-4">데이터를 불러오는 중입니다...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-100 text-gray-900 font-sans">
@@ -98,6 +162,8 @@ const App: React.FC = () => {
                         onDelete={handleDelete}
                         onAddNew={handleAddNew}
                         onViewDetails={handleViewDetails}
+                        onBackup={handleBackup}
+                        onRestore={handleRestore}
                     />
                 )}
                 {view === 'form' && (

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Farm } from '../types';
 import { exportFarmsToExcel } from '../utils/excelExporter';
-import { PencilIcon, TrashIcon, ExportIcon } from './icons';
+import { PencilIcon, TrashIcon, ExportIcon, BackupIcon, RestoreIcon } from './icons';
 
 interface FarmListProps {
   farms: Farm[];
@@ -9,9 +9,11 @@ interface FarmListProps {
   onDelete: (farmId: string) => void;
   onAddNew: () => void;
   onViewDetails: (farm: Farm) => void;
+  onBackup: () => void;
+  onRestore: (file: File) => void;
 }
 
-const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, onViewDetails }) => {
+const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, onViewDetails, onBackup, onRestore }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceFilter, setServiceFilter] = useState('all'); // 'all', 'sugar', 'sensor'
   const [supportFilter, setSupportFilter] = useState('all'); // 'all', 'yes', 'no'
@@ -19,6 +21,7 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   const [supportYearEnd, setSupportYearEnd] = useState('');
   const [alternateBearingFilter, setAlternateBearingFilter] = useState('all'); // 'all', 'yes', 'no'
   const [alternateBearingYear, setAlternateBearingYear] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const filteredFarms = useMemo(() => {
@@ -57,12 +60,11 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
       })();
 
       const alternateBearingMatch = (() => {
-        if (alternateBearingFilter === 'all') {
+        if (alternateBearingFilter === 'all' || alternateBearingYear === '') {
             return true;
         }
         const year = parseInt(alternateBearingYear);
         if (isNaN(year)) {
-            // A year must be entered to filter. If not entered, don't apply filter yet.
             return true;
         }
         const dataForYear = farm.annualData.find(d => d.year === year);
@@ -71,7 +73,6 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
             return !!dataForYear && dataForYear.hasAlternateBearing;
         }
         if (alternateBearingFilter === 'no') {
-            // True if no data exists for that year, or if data exists and `hasAlternateBearing` is false.
             return !dataForYear || !dataForYear.hasAlternateBearing;
         }
         return true;
@@ -83,6 +84,20 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   
   const handleExport = () => {
     exportFarmsToExcel(filteredFarms, 'JEUS 감귤 농가_검색결과');
+  };
+  
+  const handleRestoreClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onRestore(file);
+    }
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
   return (
@@ -163,6 +178,15 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
                 <ExportIcon />
                 <span className="ml-2">Excel 내보내기</span>
             </button>
+            <button onClick={onBackup} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300">
+                <BackupIcon />
+                <span className="ml-2">데이터 백업</span>
+            </button>
+            <button onClick={handleRestoreClick} className="flex items-center bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-300">
+                <RestoreIcon />
+                <span className="ml-2">데이터 복원</span>
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
             <button onClick={onAddNew} className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition duration-300">
                 신규 농가 추가
             </button>
