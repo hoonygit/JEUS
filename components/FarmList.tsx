@@ -11,9 +11,15 @@ interface FarmListProps {
   onViewDetails: (farm: Farm) => void;
   onBackup: () => void;
   onRestore: (file: File) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
-const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, onViewDetails, onBackup, onRestore }) => {
+const FarmList: React.FC<FarmListProps> = ({ 
+  farms, onEdit, onDelete, onAddNew, onViewDetails, onBackup, onRestore,
+  currentPage, totalPages, onPageChange
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceFilter, setServiceFilter] = useState('all'); // 'all', 'sugar', 'sensor'
   const [supportFilter, setSupportFilter] = useState('all'); // 'all', 'yes', 'no'
@@ -25,6 +31,8 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
 
 
   const filteredFarms = useMemo(() => {
+    // Note: With pagination, filtering should ideally be done on the server-side
+    // for performance. This client-side filtering will only apply to the current page's data.
     return farms.filter(farm => {
       const nameMatch = farm.basicInfo.name.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -44,7 +52,6 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
           const startValid = !isNaN(start);
           const endValid = !isNaN(end);
 
-          // If no year range is specified, just check for existence.
           if (!startValid && !endValid) {
             return true;
           }
@@ -83,6 +90,8 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   }, [farms, searchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear]);
   
   const handleExport = () => {
+    // Note: Exports only the currently visible (and filtered) page of farms.
+    // For a full export, a different API endpoint would be needed.
     exportFarmsToExcel(filteredFarms, 'JEUS 감귤 농가_검색결과');
   };
   
@@ -240,6 +249,27 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
           </tbody>
         </table>
       </div>
+       {totalPages > 0 && (
+          <div className="mt-6 flex justify-center items-center">
+              <button
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                  이전
+              </button>
+              <span className="px-4 py-2 bg-white border-t border-b border-gray-300 text-gray-700">
+                  Page {currentPage} of {totalPages}
+              </span>
+              <button
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                  다음
+              </button>
+          </div>
+      )}
     </div>
   );
 };
