@@ -124,7 +124,7 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">농가 목록 ({filteredFarms.length})</h2>
+        <h2 className="text-2xl font-bold text-gray-800">검색 농가 목록 수 : {filteredFarms.length} </h2>
         <div className="flex items-center space-x-2">
            <button onClick={onBackup} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300">
                 <BackupIcon /> <span className="ml-2 hidden sm:inline">백업</span>
