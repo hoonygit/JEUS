@@ -74,13 +74,13 @@ const PreCheckModal: React.FC<PreCheckModalProps> = ({ onCheck, onCancel }) => {
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition font-semibold"
             >
               취소
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition"
+              className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition font-semibold"
             >
               확인 및 계속
             </button>
@@ -134,14 +134,14 @@ const DuplicateSelectionModal: React.FC<DuplicateSelectionModalProps> = ({ farms
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition font-semibold"
           >
             취소
           </button>
           <button
             type="button"
             onClick={onCreateNew}
-            className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition"
+            className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition font-semibold"
           >
             새 농가로 등록하기
           </button>
@@ -280,10 +280,8 @@ const App: React.FC = () => {
             const jsonString = JSON.stringify(currentFarms, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const date = new Date().toISOString().slice(0, 10);
-            const fileName = `back_${date}.json`;
+            const fileName = `jeus_farm_backup_${date}.json`;
 
-            // Check if the modern File System Access API can be used.
-            // It requires the API to exist and not be in a cross-origin iframe.
             const canUsePicker = 'showSaveFilePicker' in window && window.self === window.top;
 
             if (canUsePicker) {
@@ -298,19 +296,16 @@ const App: React.FC = () => {
                     const writable = await handle.createWritable();
                     await writable.write(blob);
                     await writable.close();
-                    return; // Success, exit function
+                    return;
                 } catch (err: any) {
-                    // AbortError is thrown when the user cancels the file picker.
                     if (err.name === 'AbortError') {
                         console.log('File save cancelled by user.');
                         return;
                     }
-                    // For other errors, log a warning and proceed to the fallback method.
                     console.warn("showSaveFilePicker failed, falling back to legacy download.", err);
                 }
             }
 
-            // Fallback for older browsers, if inside an iframe, or if the new API fails.
             console.log("Using legacy download method.");
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -366,23 +361,24 @@ const App: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-orange-500 mx-auto"></div>
-                    <p className="text-xl text-gray-700 mt-4">데이터를 불러오는 중입니다...</p>
+                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-lg text-gray-600 mt-4 font-semibold">데이터를 불러오는 중입니다...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 text-gray-900 font-sans">
-            <header className="bg-orange-500 shadow-md">
+        <div className="min-h-screen bg-gray-100 text-gray-900 font-sans flex flex-col">
+            <header className="bg-white shadow-md sticky top-0 z-10">
                 <div className="container mx-auto px-6 py-4">
-                    <h1 className="text-3xl font-bold text-white">JEUS 감귤 농가 관리 시스템</h1>
+                    <h1 className="text-3xl font-bold text-gray-800">JEUS 농가관리 데이터베이스</h1>
+                    <p className="text-sm text-gray-500 mt-1">감귤 농가의 모든 정보를 체계적으로 관리하세요.</p>
                 </div>
             </header>
-            <main className="container mx-auto p-6">
+            <main className="container mx-auto p-6 flex-grow">
                 {view === 'list' && (
                     <FarmList
                         farms={farms}
@@ -426,8 +422,8 @@ const App: React.FC = () => {
                     />
                 )}
             </main>
-            <footer className="text-center py-4 mt-auto text-gray-500 text-sm">
-                <p>&copy; {new Date().getFullYear()} Citrus Farm Management. All rights reserved.</p>
+            <footer className="text-center py-4 text-gray-500 text-sm">
+                <p>&copy; {new Date().getFullYear()} JEUS Farm Management System. All rights reserved.</p>
             </footer>
         </div>
     );
