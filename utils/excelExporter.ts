@@ -1,5 +1,6 @@
 import { Farm } from '../types';
-import * as XLSX from 'xlsx';
+
+declare const XLSX: any;
 
 // Helper to sanitize sheet names (max 31 chars, no invalid chars)
 const sanitizeSheetName = (name: string): string => {
