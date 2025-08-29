@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo, useRef } from 'react';
-import { Farm } from '../types';
-import { exportFarmsToExcel } from '../utils/excelExporter';
-import { PencilIcon, TrashIcon, ExportIcon, BackupIcon, RestoreIcon } from './icons';
+import { Farm, PredefinedProjectName } from '../types';
+import { exportFarmsToExcel, exportFarmContactsToExcel } from '../utils/excelExporter';
+import { PencilIcon, TrashIcon, ExportIcon, BackupIcon, RestoreIcon, XIcon } from './icons';
 
 interface FarmListProps {
   farms: Farm[];
@@ -11,34 +12,31 @@ interface FarmListProps {
   onViewDetails: (farm: Farm) => void;
   onBackup: () => void;
   onRestore: (file: File) => void;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
 }
 
-const FarmList: React.FC<FarmListProps> = ({ 
-  farms, onEdit, onDelete, onAddNew, onViewDetails, onBackup, onRestore,
-  currentPage, totalPages, onPageChange
-}) => {
+const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, onViewDetails, onBackup, onRestore }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('all'); // 'all', 'sugar', 'sensor'
+  const [serviceFilter, setServiceFilter] = useState('all'); // 'all', 'sugar', 'sensor', 'corporate'
   const [supportFilter, setSupportFilter] = useState('all'); // 'all', 'yes', 'no'
+  const [projectFilter, setProjectFilter] = useState('all');
   const [supportYearStart, setSupportYearStart] = useState('');
   const [supportYearEnd, setSupportYearEnd] = useState('');
   const [alternateBearingFilter, setAlternateBearingFilter] = useState('all'); // 'all', 'yes', 'no'
   const [alternateBearingYear, setAlternateBearingYear] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const filteredFarms = useMemo(() => {
-    // Note: With pagination, filtering should ideally be done on the server-side
-    // for performance. This client-side filtering will only apply to the current page's data.
     return farms.filter(farm => {
-      const nameMatch = farm.basicInfo.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchTermLower = searchTerm.toLowerCase();
+      const searchMatch = farm.basicInfo.name.toLowerCase().includes(searchTermLower) ||
+                          farm.basicInfo.contact.toLowerCase().includes(searchTermLower);
 
       const serviceMatch = (() => {
         if (serviceFilter === 'sugar') return farm.serviceInfo.useSugarService;
         if (serviceFilter === 'sensor') return farm.serviceInfo.useSensorService;
+        if (serviceFilter === 'corporate') return farm.basicInfo.isCorporate;
         return true; // 'all'
       })();
 
@@ -52,6 +50,7 @@ const FarmList: React.FC<FarmListProps> = ({
           const startValid = !isNaN(start);
           const endValid = !isNaN(end);
 
+          // If no year range is specified, just check for existence.
           if (!startValid && !endValid) {
             return true;
           }
@@ -84,16 +83,23 @@ const FarmList: React.FC<FarmListProps> = ({
         }
         return true;
       })();
+      
+      const projectMatch = (() => {
+          if (projectFilter === 'all') {
+              return true;
+          }
+          const predefinedNames = Object.values(PredefinedProjectName);
+          return farm.supportPrograms.some(program => {
+              if (projectFilter === PredefinedProjectName.ETC) {
+                  return !predefinedNames.includes(program.projectName as PredefinedProjectName);
+              }
+              return program.projectName === projectFilter;
+          });
+      })();
 
-      return nameMatch && serviceMatch && supportMatch && alternateBearingMatch;
+      return searchMatch && serviceMatch && supportMatch && alternateBearingMatch && projectMatch;
     });
-  }, [farms, searchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear]);
-  
-  const handleExport = () => {
-    // Note: Exports only the currently visible (and filtered) page of farms.
-    // For a full export, a different API endpoint would be needed.
-    exportFarmsToExcel(filteredFarms, 'JEUS 감귤 농가_검색결과');
-  };
+  }, [farms, searchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear, projectFilter]);
   
   const handleRestoreClick = () => {
     fileInputRef.current?.click();
@@ -116,21 +122,22 @@ const FarmList: React.FC<FarmListProps> = ({
         <div className="flex items-center flex-wrap justify-end gap-2">
             <input
                 type="text"
-                placeholder="농가명 검색..."
+                placeholder="농가명 또는 연락처 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                aria-label="농가명 검색"
+                aria-label="농가명 또는 연락처 검색"
             />
              <select
                 value={serviceFilter}
                 onChange={(e) => setServiceFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
-                aria-label="서비스 사용 여부 필터"
+                aria-label="서비스 또는 농가 유형 필터"
             >
-                <option value="all">서비스 (전체)</option>
+                <option value="all">서비스/유형 (전체)</option>
                 <option value="sugar">당도 서비스 사용</option>
                 <option value="sensor">센서 서비스 사용</option>
+                <option value="corporate">기업농</option>
             </select>
              <select
                 value={supportFilter}
@@ -164,6 +171,15 @@ const FarmList: React.FC<FarmListProps> = ({
               </>
             )}
             <select
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                aria-label="지원사업명 필터"
+            >
+                <option value="all">지원사업명 (전체)</option>
+                {Object.values(PredefinedProjectName).map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+            <select
                 value={alternateBearingFilter}
                 onChange={(e) => setAlternateBearingFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
@@ -183,7 +199,7 @@ const FarmList: React.FC<FarmListProps> = ({
                   aria-label="해거리 검색년도"
                 />
             )}
-            <button onClick={handleExport} className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300">
+            <button onClick={() => setShowExportModal(true)} className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300">
                 <ExportIcon />
                 <span className="ml-2">Excel 내보내기</span>
             </button>
@@ -249,26 +265,38 @@ const FarmList: React.FC<FarmListProps> = ({
           </tbody>
         </table>
       </div>
-       {totalPages > 0 && (
-          <div className="mt-6 flex justify-center items-center">
-              <button
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                  이전
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Excel 내보내기 옵션</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-500 hover:text-gray-800">
+                <XIcon />
               </button>
-              <span className="px-4 py-2 bg-white border-t border-b border-gray-300 text-gray-700">
-                  Page {currentPage} of {totalPages}
-              </span>
+            </div>
+            <p className="text-gray-600 mb-6">내보낼 데이터 유형을 선택해주세요.</p>
+            <div className="flex flex-col space-y-3">
               <button
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  exportFarmContactsToExcel(filteredFarms, 'JEUS_농가_연락처');
+                  setShowExportModal(false);
+                }}
+                className="w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
               >
-                  다음
+                연락처만 내보내기
               </button>
+              <button
+                onClick={() => {
+                  exportFarmsToExcel(filteredFarms, 'JEUS_감귤_농가_전체_검색결과');
+                  setShowExportModal(false);
+                }}
+                className="w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-300"
+              >
+                전체 데이터 내보내기
+              </button>
+            </div>
           </div>
+        </div>
       )}
     </div>
   );

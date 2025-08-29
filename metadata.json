@@ -1,5 +1,5 @@
 {
-  "name": "JEUS 감귤 농가 관리 시스템_DB",
+  "name": "JEUS 농가관리 데이터베이스",
   "description": "감귤 농가의 기본 정보, 시설, 지원사업, 사용 서비스, 연간 데이터를 관리하고 검색하며 엑셀로 내보낼 수 있는 통합 관리 시스템입니다.",
   "requestFramePermissions": []
 }

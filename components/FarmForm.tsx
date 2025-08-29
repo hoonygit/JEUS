@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Farm, CoveringType, SupportProgram, AnnualData, CorporateFarmDetails, ConsultationLog, ConsultationCategory } from '../types';
+import { Farm, CoveringType, SupportProgram, AnnualData, CorporateFarmDetails, ConsultationLog, ConsultationCategory, PredefinedProjectName } from '../types';
 import { PlusIcon, TrashIcon, XIcon } from './icons';
 
 interface FarmFormProps {
@@ -9,7 +9,7 @@ interface FarmFormProps {
   onCancel: () => void;
 }
 
-const BLANK_FARM: Omit<Farm, 'id' | 'corporateFarmDetails'> = {
+export const BLANK_FARM: Omit<Farm, 'id' | 'corporateFarmDetails'> = {
   basicInfo: { id: '', name: '', contact: '', address: '', areaPyeong: 0, cultivar: '', treeCount: 0, isCorporate: false },
   facilityInfo: { slope: '', plantingDistance: '', hasCovering: false, coveringType: '', hasPower: false, hasInternet: false, hasUmbrellaSystem: false, hasDripHose: false, hasSprinkler: false, hasWindbreak: false, hasOpener: false },
   supportPrograms: [],
@@ -95,7 +95,7 @@ const FarmForm: React.FC<FarmFormProps> = ({ initialData, onSave, onCancel }) =>
   };
 
   const addSupportProgram = () => {
-    const newProgram: SupportProgram = { id: crypto.randomUUID(), year: new Date().getFullYear(), projectName: '', projectDescription: '', localGovtFund: 0, selfFund: 0, isSelected: false };
+    const newProgram: SupportProgram = { id: crypto.randomUUID(), year: new Date().getFullYear(), projectName: PredefinedProjectName.VARIETY_RENEWAL, projectDescription: '', localGovtFund: 0, selfFund: 0, isSelected: false };
     setFarmData(prev => ({ ...prev, supportPrograms: [...prev.supportPrograms, newProgram] }));
   };
 
@@ -311,17 +311,46 @@ const FarmForm: React.FC<FarmFormProps> = ({ initialData, onSave, onCancel }) =>
           <fieldset className="p-4 border rounded-md">
             <legend className="text-xl font-semibold text-gray-700 px-2">지원 사업 정보</legend>
             <div className="space-y-4">
-              {farmData.supportPrograms.map((p, i) => (
-                <div key={p.id} className="p-3 bg-gray-50 rounded-md border grid grid-cols-2 md:grid-cols-3 gap-3 relative">
-                   <button type="button" onClick={() => removeSupportProgram(i)} className="absolute top-2 right-2 text-red-500 hover:text-red-700"><TrashIcon /></button>
-                   {renderInput('년도', p.year, (e) => updateSupportProgram(i, 'year', Number(e.target.value)), 'number')}
-                   {renderInput('사업명', p.projectName, (e) => updateSupportProgram(i, 'projectName', e.target.value))}
-                   {renderInput('사업 내용', p.projectDescription, (e) => updateSupportProgram(i, 'projectDescription', e.target.value))}
-                   {renderInput('지방비', p.localGovtFund, (e) => updateSupportProgram(i, 'localGovtFund', Number(e.target.value)), 'number')}
-                   {renderInput('자부담', p.selfFund, (e) => updateSupportProgram(i, 'selfFund', Number(e.target.value)), 'number')}
-                   {renderCheckbox('선정', p.isSelected, (e) => updateSupportProgram(i, 'isSelected', e.target.checked))}
-                </div>
-              ))}
+              {farmData.supportPrograms.map((p, i) => {
+                const isPredefined = Object.values(PredefinedProjectName).includes(p.projectName as PredefinedProjectName);
+                const selectValue = isPredefined ? p.projectName : PredefinedProjectName.ETC;
+                
+                return (
+                  <div key={p.id} className="p-3 bg-gray-50 rounded-md border grid grid-cols-2 md:grid-cols-3 gap-3 relative">
+                     <button type="button" onClick={() => removeSupportProgram(i)} className="absolute top-2 right-2 text-red-500 hover:text-red-700"><TrashIcon /></button>
+                     {renderInput('년도', p.year, (e) => updateSupportProgram(i, 'year', Number(e.target.value)), 'number')}
+                     <div className="flex flex-col">
+                        <label className="mb-1 font-medium text-gray-600">사업명</label>
+                        <div className="flex flex-col gap-2">
+                          <select
+                              value={selectValue}
+                              onChange={(e) => {
+                                  const value = e.target.value;
+                                  updateSupportProgram(i, 'projectName', value === PredefinedProjectName.ETC ? '' : value);
+                              }}
+                              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                          >
+                              {Object.values(PredefinedProjectName).map(name => <option key={name} value={name}>{name}</option>)}
+                          </select>
+                          {selectValue === PredefinedProjectName.ETC && (
+                              <input
+                                  type="text"
+                                  placeholder="기타 사업명 입력"
+                                  value={isPredefined ? '' : p.projectName}
+                                  onChange={(e) => updateSupportProgram(i, 'projectName', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                  required
+                              />
+                          )}
+                        </div>
+                      </div>
+                     {renderInput('사업 내용', p.projectDescription, (e) => updateSupportProgram(i, 'projectDescription', e.target.value))}
+                     {renderInput('지방비', p.localGovtFund, (e) => updateSupportProgram(i, 'localGovtFund', Number(e.target.value)), 'number')}
+                     {renderInput('자부담', p.selfFund, (e) => updateSupportProgram(i, 'selfFund', Number(e.target.value)), 'number')}
+                     {renderCheckbox('선정', p.isSelected, (e) => updateSupportProgram(i, 'isSelected', e.target.checked))}
+                  </div>
+                )
+              })}
             </div>
             <button type="button" onClick={addSupportProgram} className="mt-4 flex items-center text-orange-600 hover:text-orange-800">
               <PlusIcon /><span className="ml-1">지원 사업 추가</span>

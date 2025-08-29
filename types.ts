@@ -16,6 +16,16 @@ export enum ConsultationCategory {
     ETC = '기타',
 }
 
+export enum PredefinedProjectName {
+    VARIETY_RENEWAL = '품종갱신',
+    TREE_TRANSPLANT = '성목이식',
+    SOIL_COVERING = '토양피목',
+    PROVINCIAL_DATA = '도청데이터사업',
+    MAFRA_DATA = '농림부데이터확산사업',
+    UNIVERSITY_LINK = '대학연계사업',
+    ETC = '기타',
+}
+
 export interface ConsultationLog {
     id: string;
     date: string;

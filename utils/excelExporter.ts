@@ -199,3 +199,30 @@ export const exportFarmsToExcel = (farms: Farm[], fileName: string = '농가_리
   // 4. Write the workbook to a file
   XLSX.writeFile(workbook, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
+
+export const exportFarmContactsToExcel = (farms: Farm[], fileName: string = '농가_연락처'): void => {
+    const workbook = XLSX.utils.book_new();
+
+    if (farms.length > 0) {
+        const headers = ['농가명', '연락처'];
+        const wsData: any[][] = [
+            headers.map(h => ({ v: h, s: headerStyle }))
+        ];
+
+        farms.forEach(farm => {
+            wsData.push([
+                { v: farm.basicInfo.name, s: valueStyle },
+                { v: farm.basicInfo.contact, s: valueStyle }
+            ]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+        worksheet['!cols'] = [{ wch: 25 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(workbook, worksheet, '연락처 목록');
+    } else {
+        const worksheet = XLSX.utils.aoa_to_sheet([['내보낼 데이터가 없습니다.']]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, '정보 없음');
+    }
+
+    XLSX.writeFile(workbook, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
