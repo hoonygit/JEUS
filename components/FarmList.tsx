@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Farm, PredefinedProjectName } from '../types';
 import { exportFarmsToExcel, exportFarmContactsToExcel } from '../utils/excelExporter';
 import { PencilIcon, TrashIcon, ExportIcon, BackupIcon, RestoreIcon, XIcon, FilterIcon, ChevronDownIcon } from './icons';
@@ -49,34 +50,38 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   const filteredFarms = useMemo(() => {
     return farms.filter(farm => {
       const searchTermLower = debouncedSearchTerm.toLowerCase();
-      const searchMatch = farm.basicInfo.name.toLowerCase().includes(searchTermLower) ||
-                          farm.basicInfo.contact.toLowerCase().includes(searchTermLower);
+      const searchMatch = farm.name.toLowerCase().includes(searchTermLower) ||
+                          farm.contact.toLowerCase().includes(searchTermLower) ||
+                          farm.plots.some(plot => plot.address.toLowerCase().includes(searchTermLower));
 
       const serviceMatch = (() => {
-        if (serviceFilter === 'sugar') return farm.serviceInfo.useSugarService;
-        if (serviceFilter === 'sensor') return farm.serviceInfo.useSensorService;
-        if (serviceFilter === 'corporate') return farm.basicInfo.isCorporate;
+        if (serviceFilter === 'sugar') return farm.plots.some(p => p.serviceInfo.useSugarService);
+        if (serviceFilter === 'sensor') return farm.plots.some(p => p.serviceInfo.useSensorService);
+        if (serviceFilter === 'corporate') return farm.plots.some(p => p.isCorporate);
         return true; // 'all'
       })();
 
       const supportMatch = (() => {
-        if (supportFilter === 'no') return farm.supportPrograms.length === 0;
+        const farmHasAnySupport = farm.plots.some(p => p.supportPrograms.length > 0);
+        if (supportFilter === 'no') return !farmHasAnySupport;
         if (supportFilter === 'yes') {
-          if (farm.supportPrograms.length === 0) return false;
-          
-          const start = parseInt(supportYearStart);
-          const end = parseInt(supportYearEnd);
-          const startValid = !isNaN(start);
-          const endValid = !isNaN(end);
+            if (!farmHasAnySupport) return false;
 
-          if (!startValid && !endValid) return true;
+            const start = parseInt(supportYearStart);
+            const end = parseInt(supportYearEnd);
+            const startValid = !isNaN(start);
+            const endValid = !isNaN(end);
 
-          return farm.supportPrograms.some(program => {
-              const year = program.year;
-              const afterStart = startValid ? year >= start : true;
-              const beforeEnd = endValid ? year <= end : true;
-              return afterStart && beforeEnd;
-          });
+            if (!startValid && !endValid) return true;
+
+            return farm.plots.some(plot => 
+                plot.supportPrograms.some(program => {
+                    const year = program.year;
+                    const afterStart = startValid ? year >= start : true;
+                    const beforeEnd = endValid ? year <= end : true;
+                    return afterStart && beforeEnd;
+                })
+            );
         }
         return true; // 'all'
       })();
@@ -86,32 +91,37 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
         const year = parseInt(alternateBearingYear);
         if (isNaN(year)) return true;
 
-        const dataForYear = farm.annualData.find(d => d.year === year);
-        if (alternateBearingFilter === 'yes') return !!dataForYear && dataForYear.hasAlternateBearing;
-        if (alternateBearingFilter === 'no') return !dataForYear || !dataForYear.hasAlternateBearing;
-        return true;
+        return farm.plots.some(plot => {
+            const dataForYear = plot.annualData.find(d => d.year === year);
+            if (alternateBearingFilter === 'yes') return !!dataForYear && dataForYear.hasAlternateBearing;
+            if (alternateBearingFilter === 'no') return !dataForYear || !dataForYear.hasAlternateBearing;
+            return true;
+        });
       })();
       
       const projectMatch = (() => {
           if (projectFilter === 'all') return true;
           const predefinedNames = Object.values(PredefinedProjectName);
-          return farm.supportPrograms.some(program => {
-              if (projectFilter === PredefinedProjectName.ETC) {
-                  return !predefinedNames.includes(program.projectName as PredefinedProjectName);
-              }
-              return program.projectName === projectFilter;
-          });
+          
+          return farm.plots.some(plot => 
+              plot.supportPrograms.some(program => {
+                  if (projectFilter === PredefinedProjectName.ETC) {
+                      return !predefinedNames.includes(program.projectName as PredefinedProjectName);
+                  }
+                  return program.projectName === projectFilter;
+              })
+          );
       })();
 
       return searchMatch && serviceMatch && supportMatch && alternateBearingMatch && projectMatch;
     });
   }, [farms, debouncedSearchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear, projectFilter]);
   
-  const handleRestoreClick = () => {
+  const handleRestoreClick = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       onRestore(file);
@@ -119,7 +129,7 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
     if (event.target) {
       event.target.value = '';
     }
-  };
+  }, [onRestore]);
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
@@ -146,11 +156,11 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
             <div className="flex flex-col sm:flex-row gap-4">
                 <input
                     type="text"
-                    placeholder="농가명 또는 연락처로 검색..."
+                    placeholder="농가명, 연락처, 주소로 검색..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    aria-label="농가명 또는 연락처 검색"
+                    aria-label="농가명, 연락처, 주소 검색"
                 />
                 <button 
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -250,8 +260,8 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
             <tr>
               <th className="px-4 py-3 text-sm font-semibold text-gray-700">농가명</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-700">연락처</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-700 hidden md:table-cell">주소</th>
-              <th className="px-4 py-3 text-sm font-semibold text-gray-700 hidden sm:table-cell">면적(평)</th>
+              <th className="px-4 py-3 text-sm font-semibold text-gray-700 hidden md:table-cell">대표 주소</th>
+              <th className="px-4 py-3 text-sm font-semibold text-gray-700 text-center hidden sm:table-cell">필지 수</th>
               <th className="px-4 py-3 text-sm font-semibold text-gray-700 text-center">작업</th>
             </tr>
           </thead>
@@ -259,21 +269,21 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
             {filteredFarms.length > 0 ? (
               filteredFarms.map((farm, index) => (
                 <tr key={farm.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-50 cursor-pointer`} onClick={() => onViewDetails(farm)}>
-                  <td className="px-4 py-3 text-gray-800 font-medium">{farm.basicInfo.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{farm.basicInfo.contact}</td>
-                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{farm.basicInfo.address}</td>
-                  <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{farm.basicInfo.areaPyeong.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-gray-800 font-medium">{farm.name}</td>
+                  <td className="px-4 py-3 text-gray-600">{farm.contact}</td>
+                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{farm.plots[0]?.address || '주소 없음'}</td>
+                  <td className="px-4 py-3 text-gray-600 text-center hidden sm:table-cell">{farm.plots.length}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center items-center space-x-2">
-                      <button onClick={(e) => { e.stopPropagation(); onEdit(farm); }} className="p-2 text-blue-600 hover:text-blue-800 transition duration-300" aria-label={`${farm.basicInfo.name} 정보 수정`}>
+                      <button onClick={(e) => { e.stopPropagation(); onEdit(farm); }} className="p-2 text-blue-600 hover:text-blue-800 transition duration-300" aria-label={`${farm.name} 정보 수정`}>
                         <PencilIcon />
                       </button>
                       <button onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm(`'${farm.basicInfo.name}' 농가 정보를 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                        if (window.confirm(`'${farm.name}' 농가 정보를 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
                           onDelete(farm.id);
                         }
-                      }} className="p-2 text-red-600 hover:text-red-800 transition duration-300" aria-label={`${farm.basicInfo.name} 정보 삭제`}>
+                      }} className="p-2 text-red-600 hover:text-red-800 transition duration-300" aria-label={`${farm.name} 정보 삭제`}>
                         <TrashIcon />
                       </button>
                     </div>
@@ -327,4 +337,4 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   );
 };
 
-export default FarmList;
+export default React.memo(FarmList);

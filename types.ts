@@ -46,18 +46,6 @@ export interface CorporateFarmDetails {
     balanceDueDate?: string;
     balancePayment?: number;
     mulchingWorkDate?: string;
-    consultationLogs: ConsultationLog[];
-}
-
-export interface BasicFarmInfo {
-    id: string;
-    name: string;
-    contact: string;
-    address: string;
-    areaPyeong: number;
-    cultivar: string;
-    treeCount: number;
-    isCorporate: boolean;
 }
 
 export interface FacilityInfo {
@@ -104,12 +92,24 @@ export interface AnnualData {
     notes: string;
 }
 
-export interface Farm {
+export interface Plot {
     id: string;
-    basicInfo: BasicFarmInfo;
+    address: string;
+    areaPyeong: number;
+    cultivar: string;
+    treeCount: number;
+    isCorporate: boolean;
     facilityInfo: FacilityInfo;
-    supportPrograms: SupportProgram[];
     serviceInfo: ServiceInfo;
     annualData: AnnualData[];
+    consultationLogs: ConsultationLog[];
+    supportPrograms: SupportProgram[];
     corporateFarmDetails?: CorporateFarmDetails;
+}
+
+export interface Farm {
+    id: string;
+    name: string;
+    contact: string;
+    plots: Plot[];
 }

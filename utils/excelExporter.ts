@@ -1,4 +1,4 @@
-import { Farm } from '../types';
+import { Farm, Plot, SupportProgram } from '../types';
 
 declare const XLSX: any;
 
@@ -20,6 +20,8 @@ const border = {
 
 const titleStyle = { font: { bold: true, sz: 14, color: { rgb: "FF444444" } }, alignment: { vertical: 'center', horizontal: 'center' } };
 
+const subTitleStyle = { font: { bold: true, sz: 12, color: { rgb: "FF666666" } }, fill: { fgColor: { rgb: "FFF0F0F0" } }, alignment: { vertical: 'center', horizontal: 'center' }, border };
+
 const headerStyle = { font: { bold: true, color: { rgb: "FF444444" } }, fill: { fgColor: { rgb: "FFEAEAEA" } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
 
 const labelStyle = { font: { bold: true }, fill: { fgColor: { rgb: "FFF5F5F5" } }, alignment: { vertical: 'center', wrapText: true }, border };
@@ -30,10 +32,10 @@ const linkStyle = { font: { color: { rgb: "FF0000FF" }, underline: true }, align
 
 
 // Adds a simple key-value section to the worksheet data array
-const addKeyValueSection = (wsData: any[][], title: string, data: [string, any][], merges: any[], currentRow: number) => {
+const addKeyValueSection = (wsData: any[][], title: string, data: [string, any][], merges: any[], currentRow: number, columns: number = 2) => {
   if (data.length === 0) return 0;
-  merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 1 } });
-  wsData.push([{ v: title, s: titleStyle }, null]);
+  merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: columns - 1 } });
+  wsData.push([{ v: title, s: titleStyle }, ...Array(columns - 1).fill(null)]);
   data.forEach(([label, value]) => {
     wsData.push([{ v: label, s: labelStyle }, { v: value ?? '-', s: valueStyle }]);
   });
@@ -54,95 +56,22 @@ const addTableSection = (wsData: any[][], title: string, headers: string[], data
   return dataRows.length + 3; // Rows added
 };
 
+const addPlotDetailsToSheet = (wsData: any[][], plot: Plot, merges: any[], currentRow: number) => {
+    merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 5 } });
+    wsData.push([{ v: `필지 정보: ${plot.address}`, s: subTitleStyle }, ...Array(5).fill(null)]);
+    currentRow++;
 
-export const exportFarmsToExcel = (farms: Farm[], fileName: string = '농가_리포트'): void => {
-  const workbook = XLSX.utils.book_new();
-
-  // 1. Create Summary Sheet if there are farms
-  if (farms.length > 0) {
-    const summaryHeaders = ['농가명', '연락처', '주소', '면적(평)', '기업농', '지원사업', '상담일지'];
-    const summaryData: any[][] = [
-      summaryHeaders.map(h => ({ v: h, s: headerStyle }))
+    // --- Plot Basic & Facility Info ---
+    const plotBasicInfo: [string, any][] = [
+      ['주소', plot.address],
+      ['면적(평)', plot.areaPyeong.toLocaleString()],
+      ['품종', plot.cultivar],
+      ['과수본수', `${plot.treeCount.toLocaleString()} 주`],
+      ['기업농', formatBoolean(plot.isCorporate)],
     ];
-
-    farms.forEach(farm => {
-      const sheetName = sanitizeSheetName(farm.basicInfo.name);
-      const farmNameCell = {
-        v: farm.basicInfo.name,
-        l: { Target: `'${sheetName}'!A1` }, // Corrected hyperlink reference
-        s: linkStyle
-      };
-      
-      const hasSupportPrograms = farm.supportPrograms && farm.supportPrograms.length > 0;
-      const hasConsultationLogs = farm.basicInfo.isCorporate && farm.corporateFarmDetails && farm.corporateFarmDetails.consultationLogs.length > 0;
-
-      summaryData.push([
-        farmNameCell,
-        { v: farm.basicInfo.contact, s: valueStyle },
-        { v: farm.basicInfo.address, s: valueStyle },
-        { v: farm.basicInfo.areaPyeong, s: valueStyle },
-        { v: formatBoolean(farm.basicInfo.isCorporate), s: valueStyle },
-        { v: formatBoolean(hasSupportPrograms), s: valueStyle },
-        { v: formatBoolean(hasConsultationLogs), s: valueStyle }
-      ]);
-    });
-
-    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-    summaryWs['!cols'] = [ { wch: 20 }, { wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 } ];
-    XLSX.utils.book_append_sheet(workbook, summaryWs, '농가 요약 목록');
-  }
-
-  // 2. Create individual farm detail sheets
-  farms.forEach(farm => {
-    const wsData: any[][] = [];
-    const merges: any[] = [];
-    let currentRow = 0;
-
-    // --- Basic Info Section ---
-    const basicInfoData: [string, any][] = [
-      ['농가명', farm.basicInfo.name],
-      ['연락처', farm.basicInfo.contact],
-      ['주소', farm.basicInfo.address],
-      ['면적(평)', farm.basicInfo.areaPyeong.toLocaleString()],
-      ['품종', farm.basicInfo.cultivar],
-      ['과수본수', `${farm.basicInfo.treeCount.toLocaleString()} 주`],
-      ['기업농', formatBoolean(farm.basicInfo.isCorporate)],
-    ];
-    currentRow += addKeyValueSection(wsData, '기본 농가 정보', basicInfoData, merges, currentRow);
-
-    // --- Corporate Farm Section ---
-    if (farm.basicInfo.isCorporate && farm.corporateFarmDetails) {
-      const details = farm.corporateFarmDetails;
-      const corporateInfoData: [string, any][] = [
-        ['상담년도', details.year],
-        ['상담일', details.consultationDate],
-        ['예상관수', `${details.estimatedQuantity.toLocaleString()} 관`],
-        ['계약관수', `${details.contractedQuantity.toLocaleString()} 관`],
-        ['계약여부', formatBoolean(details.isContracted)],
-        ['특이사항', details.specialNotes],
-      ];
-      currentRow += addKeyValueSection(wsData, '기업농 관련 정보', corporateInfoData, merges, currentRow);
-      
-      if (details.isContracted) {
-          const contractInfoData: [string, any][] = [
-              ['계약일', details.contractDate],
-              ['계약금', `${details.downPayment?.toLocaleString() ?? 0} 원`],
-              ['잔금일', details.balanceDueDate],
-              ['잔금', `${details.balancePayment?.toLocaleString() ?? 0} 원`],
-              ['멀칭작업일', details.mulchingWorkDate],
-          ];
-          currentRow += addKeyValueSection(wsData, '계약 상세 정보', contractInfoData, merges, currentRow);
-      }
-      
-      if (details.consultationLogs && details.consultationLogs.length > 0) {
-          const headers = ['날짜', '구분', '내용', '비고'];
-          const logRows = details.consultationLogs.map(log => [log.date, log.category, log.content, log.notes]);
-          currentRow += addTableSection(wsData, '상담 일지 내역', headers, logRows, merges, currentRow);
-      }
-    }
-
-    // --- Facility Info Section ---
-    const { facilityInfo } = farm;
+    currentRow += addKeyValueSection(wsData, '필지 기본 정보', plotBasicInfo, merges, currentRow, 6);
+    
+    const { facilityInfo } = plot;
     const facilityInfoData: [string, any][] = [
       ['경사도', facilityInfo.slope],
       ['식재간격/원지정비', facilityInfo.plantingDistance],
@@ -155,30 +84,133 @@ export const exportFarmsToExcel = (farms: Farm[], fileName: string = '농가_리
       ['방풍망', formatBoolean(facilityInfo.hasWindbreak)],
       ['개폐기', formatBoolean(facilityInfo.hasOpener)],
     ];
-    currentRow += addKeyValueSection(wsData, '시설 정보', facilityInfoData, merges, currentRow);
-
-    // --- Service Info Section ---
-    const { serviceInfo } = farm;
+    currentRow += addKeyValueSection(wsData, '시설 정보', facilityInfoData, merges, currentRow, 6);
+    
+    // --- Service Info Section (Plot-level) ---
+    const { serviceInfo } = plot;
     const serviceInfoData: [string, any][] = [
       ['자청비 ID', serviceInfo.jacheongbiId],
       ['당도 서비스', `${formatBoolean(serviceInfo.useSugarService)} ${serviceInfo.useSugarService ? `(${serviceInfo.sugarMeterInfo || '정보 없음'})` : ''}`],
       ['센서 서비스', `${formatBoolean(serviceInfo.useSensorService)} ${serviceInfo.useSensorService ? `(${serviceInfo.sensorInfo || '정보 없음'})` : ''}`],
     ];
-    currentRow += addKeyValueSection(wsData, '사용 서비스 정보', serviceInfoData, merges, currentRow);
+    currentRow += addKeyValueSection(wsData, '사용 서비스 정보', serviceInfoData, merges, currentRow, 6);
 
-    // --- Support Programs Table ---
-    if (farm.supportPrograms.length > 0) {
-        const headers = ['년도', '사업명', '내용', '선정', '자부담(원)'];
-        const programRows = farm.supportPrograms.map(p => [ p.year, p.projectName, p.projectDescription, formatBoolean(p.isSelected), p.selfFund.toLocaleString() ]);
+
+    // --- Corporate Farm Section (Plot-level) ---
+    if (plot.isCorporate && plot.corporateFarmDetails) {
+      const details = plot.corporateFarmDetails;
+      const corporateInfoData: [string, any][] = [
+        ['상담년도', details.year],
+        ['상담일', details.consultationDate],
+        ['예상관수', `${details.estimatedQuantity.toLocaleString()} 관`],
+        ['계약관수', `${details.contractedQuantity.toLocaleString()} 관`],
+        ['계약여부', formatBoolean(details.isContracted)],
+        ['특이사항', details.specialNotes],
+      ];
+      currentRow += addKeyValueSection(wsData, '기업농 관련 정보', corporateInfoData, merges, currentRow, 6);
+      
+      if (details.isContracted) {
+          const contractInfoData: [string, any][] = [
+              ['계약일', details.contractDate],
+              ['계약금', `${details.downPayment?.toLocaleString() ?? 0} 원`],
+              ['잔금일', details.balanceDueDate],
+              ['잔금', `${details.balancePayment?.toLocaleString() ?? 0} 원`],
+              ['멀칭작업일', details.mulchingWorkDate],
+          ];
+          currentRow += addKeyValueSection(wsData, '계약 상세 정보', contractInfoData, merges, currentRow, 6);
+      }
+    }
+
+    // --- Support Programs Table (Plot-level) ---
+    if (plot.supportPrograms.length > 0) {
+        const headers = ['년도', '사업명', '내용', '선정', '지원금(원)', '자부담(원)'];
+        const programRows = plot.supportPrograms.map(p => [
+            p.year,
+            p.projectName,
+            p.projectDescription,
+            formatBoolean(p.isSelected),
+            p.localGovtFund.toLocaleString(),
+            p.selfFund.toLocaleString()
+        ]);
         currentRow += addTableSection(wsData, '지원 사업 정보', headers, programRows, merges, currentRow);
     }
 
-    // --- Annual Data Table ---
-    if (farm.annualData.length > 0) {
+    // --- Plot Annual Data ---
+    if (plot.annualData.length > 0) {
         const headers = ['년도', '평균당도(Brix)', '예상생산량(관)', '관당가격(원)', '해거리', '비고'];
-        const annualRows = farm.annualData.map(d => [ d.year, d.avgBrix, d.estimatedYield.toLocaleString(), d.pricePerGwan.toLocaleString(), formatBoolean(d.hasAlternateBearing), d.notes ]);
+        const annualRows = plot.annualData.map(d => [ d.year, d.avgBrix, d.estimatedYield.toLocaleString(), d.pricePerGwan.toLocaleString(), formatBoolean(d.hasAlternateBearing), d.notes ]);
         currentRow += addTableSection(wsData, '년 기준 데이터', headers, annualRows, merges, currentRow);
     }
+    
+    // --- Plot Consultation Logs ---
+    if (plot.isCorporate && plot.consultationLogs.length > 0) {
+        const headers = ['날짜', '구분', '내용', '비고'];
+        const logRows = plot.consultationLogs.map(log => [log.date, log.category, log.content, log.notes]);
+        currentRow += addTableSection(wsData, '상담 일지 내역', headers, logRows, merges, currentRow);
+    }
+    
+    wsData.push([]); // Spacer row after plot section
+    currentRow++;
+    return currentRow;
+};
+
+
+export const exportFarmsToExcel = (farms: Farm[], fileName: string = '농가_리포트'): void => {
+  const workbook = XLSX.utils.book_new();
+
+  // 1. Create Summary Sheet if there are farms
+  if (farms.length > 0) {
+    const summaryHeaders = ['농가명', '연락처', '기업농', '필지 수', '총 면적(평)', '지원사업', '상담일지'];
+    const summaryData: any[][] = [
+      summaryHeaders.map(h => ({ v: h, s: headerStyle }))
+    ];
+
+    farms.forEach(farm => {
+      const sheetName = sanitizeSheetName(farm.name);
+      const farmNameCell = {
+        v: farm.name,
+        l: { Target: `'${sheetName}'!A1` },
+        s: linkStyle
+      };
+      
+      const isCorporateFarm = farm.plots.some(p => p.isCorporate);
+      const hasSupportPrograms = farm.plots.some(p => p.supportPrograms && p.supportPrograms.length > 0);
+      const hasConsultationLogs = farm.plots.some(p => p.isCorporate && p.consultationLogs.length > 0);
+      const totalArea = farm.plots.reduce((sum, p) => sum + p.areaPyeong, 0);
+
+      summaryData.push([
+        farmNameCell,
+        { v: farm.contact, s: valueStyle },
+        { v: formatBoolean(isCorporateFarm), s: valueStyle },
+        { v: farm.plots.length, s: valueStyle },
+        { v: totalArea.toLocaleString(), s: valueStyle },
+        { v: formatBoolean(hasSupportPrograms), s: valueStyle },
+        { v: formatBoolean(hasConsultationLogs), s: valueStyle }
+      ]);
+    });
+
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+    summaryWs['!cols'] = [ { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 8 } ];
+    XLSX.utils.book_append_sheet(workbook, summaryWs, '농가 요약 목록');
+  }
+
+  // 2. Create individual farm detail sheets
+  farms.forEach(farm => {
+    const wsData: any[][] = [];
+    const merges: any[] = [];
+    let currentRow = 0;
+
+    // --- Basic Farm Info Section ---
+    const basicInfoData: [string, any][] = [
+      ['농가명', farm.name],
+      ['연락처', farm.contact],
+    ];
+    currentRow += addKeyValueSection(wsData, '기본 농가 정보', basicInfoData, merges, currentRow, 6);
+
+    // --- Plot Details Section ---
+    farm.plots.forEach(plot => {
+      currentRow = addPlotDetailsToSheet(wsData, plot, merges, currentRow);
+    });
 
     const worksheet = XLSX.utils.aoa_to_sheet(wsData);
     worksheet['!merges'] = merges;
@@ -186,7 +218,7 @@ export const exportFarmsToExcel = (farms: Farm[], fileName: string = '농가_리
         { wch: 20 }, { wch: 45 }, { wch: 45 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
     ];
 
-    const sheetName = sanitizeSheetName(farm.basicInfo.name);
+    const sheetName = sanitizeSheetName(farm.name);
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   });
   
@@ -211,8 +243,8 @@ export const exportFarmContactsToExcel = (farms: Farm[], fileName: string = '농
 
         farms.forEach(farm => {
             wsData.push([
-                { v: farm.basicInfo.name, s: valueStyle },
-                { v: farm.basicInfo.contact, s: valueStyle }
+                { v: farm.name, s: valueStyle },
+                { v: farm.contact, s: valueStyle }
             ]);
         });
 

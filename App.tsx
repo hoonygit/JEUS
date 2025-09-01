@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Farm } from './types';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Farm, Plot } from './types';
 import FarmList from './components/FarmList';
-import FarmForm, { BLANK_FARM } from './components/FarmForm';
+import FarmForm, { BLANK_FARM, BLANK_PLOT } from './components/FarmForm';
 import FarmDetails from './components/FarmDetails';
 import { farmApi } from './services/api';
 import { XIcon } from './components/icons';
@@ -53,12 +54,12 @@ const PreCheckModal: React.FC<PreCheckModalProps> = ({ onCheck, onCancel }) => {
           </button>
         </div>
         <p className="text-gray-600 mb-4">
-          등록하려는 농가의 이름 또는 연락처를 입력하여 기존 데이터가 있는지 확인해주세요.
+          등록하려는 농가의 이름, 연락처 또는 주소를 입력하여 기존 데이터가 있는지 확인해주세요.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col mb-6">
             <label htmlFor="pre-check-search" className="mb-2 font-medium text-gray-700">
-              농가명 또는 연락처
+              농가명, 연락처, 또는 주소
             </label>
             <input
               id="pre-check-search"
@@ -120,10 +121,10 @@ const DuplicateSelectionModal: React.FC<DuplicateSelectionModalProps> = ({ farms
                 <button 
                   onClick={() => onSelect(farm)}
                   className="w-full text-left p-4 hover:bg-orange-50 transition duration-150"
-                  aria-label={`${farm.basicInfo.name} 농가 선택`}
+                  aria-label={`${farm.name} 농가 선택`}
                 >
-                  <p className="font-semibold text-gray-800">{farm.basicInfo.name}</p>
-                  <p className="text-sm text-gray-500">{farm.basicInfo.contact} / {farm.basicInfo.address}</p>
+                  <p className="font-semibold text-gray-800">{farm.name}</p>
+                  <p className="text-sm text-gray-500">{farm.contact} / {farm.plots.map(p => p.address).join(', ')}</p>
                 </button>
               </li>
             ))}
@@ -177,29 +178,36 @@ const App: React.FC = () => {
         fetchFarms();
     }, []);
 
-    const handleAddNew = () => {
+    const handleAddNew = useCallback(() => {
         setShowPreCheckModal(true);
-    };
+    }, []);
     
-    const createNewFarmFromSearch = (searchTerm: string) => {
+    const createNewFarmFromSearch = useCallback((searchTerm: string) => {
         const newFarmBase = JSON.parse(JSON.stringify(BLANK_FARM));
-        const isPhoneNumber = /^\d[\d-]*$/.test(searchTerm);
+        const cleanedSearch = searchTerm.replace(/-/g, '');
+        const isPhoneNumber = /^\d+$/.test(cleanedSearch) && cleanedSearch.length >= 10;
+        const isAddressLike = !isPhoneNumber && (searchTerm.includes('시') || searchTerm.includes('군') || searchTerm.includes('읍') || searchTerm.includes('면') || searchTerm.includes('리') || searchTerm.includes('로') || searchTerm.includes('길'));
+        
+        const newPlot: Plot = {
+            ...JSON.parse(JSON.stringify(BLANK_PLOT)),
+            id: crypto.randomUUID(),
+            address: isAddressLike ? searchTerm : '',
+        };
 
         const newFarmData: Farm = {
             ...newFarmBase,
             id: crypto.randomUUID(),
-            basicInfo: {
-                ...newFarmBase.basicInfo,
-                name: isPhoneNumber ? '' : searchTerm,
-                contact: isPhoneNumber ? searchTerm : '',
-            }
+            name: !isPhoneNumber && !isAddressLike ? searchTerm : '',
+            contact: isPhoneNumber ? searchTerm : '',
+            plots: [newPlot],
         };
         setEditingFarm(newFarmData);
         setView('form');
-    };
+    }, []);
 
-    const handlePreCheck = (searchTerm: string) => {
+    const handlePreCheck = useCallback((searchTerm: string) => {
         setShowPreCheckModal(false);
+        setPreCheckSearchTerm(searchTerm);
         
         const trimmedSearch = searchTerm.trim();
         if (!trimmedSearch) {
@@ -212,35 +220,35 @@ const App: React.FC = () => {
         const cleanedSearchTerm = trimmedSearch.replace(/-/g, '');
 
         const foundFarms = farms.filter(farm =>
-            farm.basicInfo.name.toLowerCase().includes(searchTermLower) ||
-            (cleanedSearchTerm.length > 0 && farm.basicInfo.contact.replace(/-/g, '').includes(cleanedSearchTerm))
+            farm.name.toLowerCase().includes(searchTermLower) ||
+            (cleanedSearchTerm.length > 0 && farm.contact.replace(/-/g, '').includes(cleanedSearchTerm)) ||
+            farm.plots.some(plot => plot.address.toLowerCase().includes(searchTermLower))
         );
 
         if (foundFarms.length === 0) {
             createNewFarmFromSearch(trimmedSearch);
         } else {
-            setPreCheckSearchTerm(trimmedSearch);
             setDuplicateFarms(foundFarms);
             setShowDuplicateSelectionModal(true);
         }
-    };
+    }, [farms, createNewFarmFromSearch]);
 
 
-    const handleEdit = (farm: Farm) => {
+    const handleEdit = useCallback((farm: Farm) => {
         setEditingFarm(farm);
         setView('form');
-    };
+    }, []);
 
-    const handleDelete = async (farmId: string) => {
+    const handleDelete = useCallback(async (farmId: string) => {
         try {
             await farmApi.deleteFarm(farmId);
             setFarms(prevFarms => prevFarms.filter(farm => farm.id !== farmId));
         } catch (error) {
             console.error("농가 정보 삭제에 실패했습니다.", error);
         }
-    };
+    }, []);
 
-    const handleSave = async (farmData: Farm) => {
+    const handleSave = useCallback(async (farmData: Farm) => {
         try {
             setIsLoading(true);
             const savedFarm = await farmApi.saveFarm(farmData);
@@ -259,22 +267,22 @@ const App: React.FC = () => {
             setEditingFarm(null);
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         setView('list');
         setEditingFarm(null);
-    };
+    }, []);
 
-    const handleViewDetails = (farm: Farm) => {
+    const handleViewDetails = useCallback((farm: Farm) => {
         setViewingFarm(farm);
-    };
+    }, []);
 
-    const handleCloseDetails = () => {
+    const handleCloseDetails = useCallback(() => {
         setViewingFarm(null);
-    };
+    }, []);
 
-    const handleBackup = async () => {
+    const handleBackup = useCallback(async () => {
         try {
             const currentFarms = await farmApi.getAllFarms();
             const jsonString = JSON.stringify(currentFarms, null, 2);
@@ -320,9 +328,9 @@ const App: React.FC = () => {
             console.error("데이터 백업에 실패했습니다.", error);
             alert("데이터 백업 중 오류가 발생했습니다.");
         }
-    };
+    }, []);
 
-    const handleRestore = (file: File) => {
+    const handleRestore = useCallback((file: File) => {
         if (!file) return;
         
         const confirmation = window.confirm("데이터를 복원하시겠습니까? 현재 모든 데이터가 선택한 파일의 내용으로 대체됩니다. 이 작업은 되돌릴 수 없습니다.");
@@ -357,7 +365,7 @@ const App: React.FC = () => {
              alert("파일을 읽는 중 오류가 발생했습니다.");
         }
         reader.readAsText(file);
-    };
+    }, []);
 
     if (isLoading) {
         return (
