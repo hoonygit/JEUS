@@ -129,7 +129,7 @@ const FarmForm: React.FC<FarmFormProps> = ({ initialData, onSave, onCancel }) =>
                 </div>
             </fieldset>
             
-            <div className="flex-grow overflow-y-auto pr-4 -mr-4 space-y-8">
+            <div className="flex-grow overflow-y-auto pr-4 -mr-4 space-y-8 min-h-0">
                 <fieldset className="p-4 border rounded-md">
                     <legend className="text-xl font-semibold text-gray-700 px-2">필지 목록 관리</legend>
                     <div className="space-y-4">
@@ -317,7 +317,7 @@ const PlotForm: React.FC<PlotFormProps> = ({ initialPlotData, onSave, onCancel }
               <h2 className="text-2xl font-bold text-gray-800">필지 정보 관리</h2>
               <button onClick={onCancel} className="text-gray-500 hover:text-gray-800"><XIcon /></button>
             </div>
-            <form onSubmit={handleSubmit} className="flex-grow flex flex-col">
+            <form onSubmit={handleSubmit} className="flex-grow flex flex-col min-h-0">
                 <div className="border-b border-gray-200">
                     <nav className="-mb-px flex space-x-6" role="tablist">
                        <TabButton tab="basic">기본/시설</TabButton>
@@ -328,7 +328,7 @@ const PlotForm: React.FC<PlotFormProps> = ({ initialPlotData, onSave, onCancel }
                     </nav>
                 </div>
 
-                <div className="flex-grow overflow-y-auto pt-6 pr-2 -mr-4 space-y-8">
+                <div className="flex-grow overflow-y-auto pt-6 pr-2 -mr-4 space-y-8 min-h-0">
                 {activeTab === 'basic' && (
                     <div role="tabpanel" className="space-y-6">
                         <fieldset className="p-4 border rounded-md">
@@ -426,21 +426,35 @@ const PlotForm: React.FC<PlotFormProps> = ({ initialPlotData, onSave, onCancel }
 
                             <fieldset className="p-4 border rounded-md">
                                 <legend className="text-lg font-semibold text-gray-700 px-2">상담 일지</legend>
-                                <div className="space-y-2">
+                                <div className="space-y-4">
                                     {plotData.consultationLogs.map((log, index) => (
-                                        <div key={log.id} className="grid grid-cols-12 gap-2 items-start p-2 border rounded-md">
-                                            <input type="date" value={log.date} onChange={e => updateConsultationLog(index, 'date', e.target.value)} className="col-span-12 sm:col-span-2 px-2 py-1 border border-gray-300 rounded-md"/>
-                                            <select value={log.category} onChange={e => updateConsultationLog(index, 'category', e.target.value as ConsultationCategory)} className="col-span-12 sm:col-span-2 px-2 py-1 border border-gray-300 rounded-md">
-                                                <option value="">구분</option>
-                                                {Object.values(ConsultationCategory).map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                            <textarea placeholder="내용" value={log.content} onChange={e => updateConsultationLog(index, 'content', e.target.value)} className="col-span-12 sm:col-span-3 px-2 py-1 border border-gray-300 rounded-md"/>
-                                            <textarea placeholder="비고" value={log.notes} onChange={e => updateConsultationLog(index, 'notes', e.target.value)} className="col-span-12 sm:col-span-4 px-2 py-1 border border-gray-300 rounded-md"/>
-                                            <button type="button" onClick={() => removeConsultationLog(index)} className="col-span-12 sm:col-span-1 p-2 text-red-500 hover:text-red-700 justify-self-center"><TrashIcon/></button>
+                                        <div key={log.id} className="p-4 border rounded-lg bg-gray-50 relative space-y-4">
+                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                <div className="flex-1">
+                                                    <label className="text-sm font-medium text-gray-600 block mb-1">상담 날짜</label>
+                                                    <input type="date" value={log.date} onChange={e => updateConsultationLog(index, 'date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="text-sm font-medium text-gray-600 block mb-1">상담 구분</label>
+                                                    <select value={log.category} onChange={e => updateConsultationLog(index, 'category', e.target.value as ConsultationCategory)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white">
+                                                        <option value="">구분 선택</option>
+                                                        {Object.values(ConsultationCategory).map(c => <option key={c} value={c}>{c}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                 <label className="text-sm font-medium text-gray-600 block mb-1">상담 내용</label>
+                                                 <textarea placeholder="상담 내용을 입력하세요" value={log.content} onChange={e => updateConsultationLog(index, 'content', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[60px] focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-600 block mb-1">비고</label>
+                                                <textarea placeholder="비고를 입력하세요" value={log.notes} onChange={e => updateConsultationLog(index, 'notes', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[40px] focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                            </div>
+                                            <button type="button" onClick={() => removeConsultationLog(index)} className="absolute top-2 right-2 p-1 text-red-500 hover:text-red-700" aria-label="상담일지 삭제"><TrashIcon/></button>
                                         </div>
                                     ))}
                                 </div>
-                                <button type="button" onClick={addConsultationLog} className="mt-2 flex items-center text-orange-600 hover:text-orange-800"><PlusIcon/><span className="ml-1">상담일지 추가</span></button>
+                                <button type="button" onClick={addConsultationLog} className="mt-4 flex items-center text-orange-600 hover:text-orange-800 font-semibold"><PlusIcon/><span className="ml-1">상담일지 추가</span></button>
                             </fieldset>
                             </>
                         )}
@@ -482,21 +496,46 @@ const PlotForm: React.FC<PlotFormProps> = ({ initialPlotData, onSave, onCancel }
                     <div role="tabpanel">
                         <fieldset className="p-4 border rounded-md">
                             <legend className="text-lg font-semibold text-gray-700 px-2">연간 데이터</legend>
-                            <div className="space-y-3">
-                                {plotData.annualData.map((data, index) => (
-                                    <div key={data.id} className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start p-3 border rounded-md bg-gray-50">
-                                        <input type="number" placeholder="년도" value={data.year} onChange={e => updateAnnualData(index, 'year', parseInt(e.target.value) || 0)} className="col-span-12 lg:col-span-1 px-2 py-1 border rounded"/>
-                                        <input type="number" placeholder="평균당도" value={data.avgBrix} onChange={e => updateAnnualData(index, 'avgBrix', parseFloat(e.target.value) || 0)} className="col-span-12 lg:col-span-1 px-2 py-1 border rounded"/>
-                                        <input type="number" placeholder="예상생산량(관)" value={data.estimatedYield} onChange={e => updateAnnualData(index, 'estimatedYield', parseInt(e.target.value) || 0)} className="col-span-12 lg:col-span-2 px-2 py-1 border rounded"/>
-                                        <input type="number" placeholder="관당가격(원)" value={data.pricePerGwan} onChange={e => updateAnnualData(index, 'pricePerGwan', parseInt(e.target.value) || 0)} className="col-span-12 lg:col-span-2 px-2 py-1 border rounded"/>
-                                        <input type="text" placeholder="출하시기" value={data.shippingSeason} onChange={e => updateAnnualData(index, 'shippingSeason', e.target.value)} className="col-span-12 lg:col-span-2 px-2 py-1 border rounded"/>
-                                        <textarea placeholder="비고" value={data.notes} onChange={e => updateAnnualData(index, 'notes', e.target.value)} className="col-span-12 lg:col-span-2 px-2 py-1 border rounded"/>
-                                        <div className="col-span-6 lg:col-span-1 flex items-center justify-center">{renderCheckbox('해거리', data.hasAlternateBearing, e => updateAnnualData(index, 'hasAlternateBearing', e.target.checked))}</div>
-                                        <button type="button" onClick={() => removeAnnualData(index)} className="col-span-6 lg:col-span-1 p-2 text-red-500 hover:text-red-700 justify-self-center"><TrashIcon/></button>
-                                    </div>
-                                ))}
+                            <div className="space-y-4">
+                                {plotData.annualData.map((data, index) => {
+                                    const dataId = `annual-${data.id}`;
+                                    return (
+                                        <div key={data.id} className="p-4 border rounded-lg bg-gray-50 relative space-y-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                                <div>
+                                                    <label htmlFor={`${dataId}-year`} className="text-sm font-medium text-gray-600 block mb-1">년도</label>
+                                                    <input id={`${dataId}-year`} type="number" value={data.year} onChange={e => updateAnnualData(index, 'year', parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor={`${dataId}-avgBrix`} className="text-sm font-medium text-gray-600 block mb-1">평균당도</label>
+                                                    <input id={`${dataId}-avgBrix`} type="number" step="0.1" value={data.avgBrix} onChange={e => updateAnnualData(index, 'avgBrix', parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor={`${dataId}-estimatedYield`} className="text-sm font-medium text-gray-600 block mb-1">예상생산량(관)</label>
+                                                    <input id={`${dataId}-estimatedYield`} type="number" value={data.estimatedYield} onChange={e => updateAnnualData(index, 'estimatedYield', parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor={`${dataId}-pricePerGwan`} className="text-sm font-medium text-gray-600 block mb-1">관당가격(원)</label>
+                                                    <input id={`${dataId}-pricePerGwan`} type="number" value={data.pricePerGwan} onChange={e => updateAnnualData(index, 'pricePerGwan', parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor={`${dataId}-shippingSeason`} className="text-sm font-medium text-gray-600 block mb-1">출하시기</label>
+                                                    <input id={`${dataId}-shippingSeason`} type="text" value={data.shippingSeason} onChange={e => updateAnnualData(index, 'shippingSeason', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label htmlFor={`${dataId}-notes`} className="text-sm font-medium text-gray-600 block mb-1">비고</label>
+                                                <textarea id={`${dataId}-notes`} value={data.notes} onChange={e => updateAnnualData(index, 'notes', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                {renderCheckbox('해거리', data.hasAlternateBearing, e => updateAnnualData(index, 'hasAlternateBearing', e.target.checked))}
+                                                <button type="button" onClick={() => removeAnnualData(index)} className="p-2 text-red-500 hover:text-red-700" aria-label="연간 데이터 삭제"><TrashIcon/></button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <button type="button" onClick={addAnnualData} className="mt-3 flex items-center text-orange-600 hover:text-orange-800"><PlusIcon/><span className="ml-1">연간 데이터 추가</span></button>
+                            <button type="button" onClick={addAnnualData} className="mt-4 flex items-center text-orange-600 hover:text-orange-800 font-semibold"><PlusIcon/><span className="ml-1">연간 데이터 추가</span></button>
                         </fieldset>
                     </div>
                 )}

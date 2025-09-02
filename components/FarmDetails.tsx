@@ -51,7 +51,7 @@ const FarmDetails: React.FC<FarmDetailsProps> = ({ farm, onClose }) => {
 
     return (
         <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+            className="fixed inset-0 z-50 flex justify-center items-start p-4 pt-10 bg-black bg-opacity-50 overflow-y-auto"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
@@ -100,7 +100,7 @@ const FarmDetails: React.FC<FarmDetailsProps> = ({ farm, onClose }) => {
                     </nav>
                 </div>
                 
-                <main className="p-6 space-y-6 overflow-y-auto">
+                <main className="flex-grow p-6 space-y-6 overflow-y-auto min-h-0">
                     {!selectedPlot && farm.plots.length > 0 && <p className="text-center text-gray-500">표시할 필지를 선택해주세요.</p>}
                     {!selectedPlot && farm.plots.length === 0 && <p className="text-center text-gray-500">등록된 필지 정보가 없습니다.</p>}
 
