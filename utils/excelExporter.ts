@@ -67,6 +67,7 @@ const addPlotDetailsToSheet = (wsData: any[][], plot: Plot, merges: any[], curre
       ['면적(평)', plot.areaPyeong.toLocaleString()],
       ['품종', plot.cultivar],
       ['과수본수', `${plot.treeCount.toLocaleString()} 주`],
+      ['재배 형태', plot.cultivationType],
       ['기업농', formatBoolean(plot.isCorporate)],
     ];
     currentRow += addKeyValueSection(wsData, '필지 기본 정보', plotBasicInfo, merges, currentRow, 6);

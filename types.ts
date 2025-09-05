@@ -26,6 +26,11 @@ export enum PredefinedProjectName {
     ETC = '기타',
 }
 
+export enum CultivationType {
+    OPEN_FIELD = '노지',
+    GREENHOUSE = '하우스',
+}
+
 export interface ConsultationLog {
     id: string;
     date: string;
@@ -99,6 +104,7 @@ export interface Plot {
     cultivar: string;
     treeCount: number;
     isCorporate: boolean;
+    cultivationType: CultivationType;
     facilityInfo: FacilityInfo;
     serviceInfo: ServiceInfo;
     annualData: AnnualData[];

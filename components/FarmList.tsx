@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Farm, PredefinedProjectName } from '../types';
+import { Farm, PredefinedProjectName, CultivationType } from '../types';
 import { exportFarmsToExcel, exportFarmContactsToExcel } from '../utils/excelExporter';
 import { PencilIcon, TrashIcon, ExportIcon, BackupIcon, RestoreIcon, XIcon, FilterIcon, ChevronDownIcon } from './icons';
 
@@ -42,6 +42,7 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
   const [supportYearEnd, setSupportYearEnd] = useState('');
   const [alternateBearingFilter, setAlternateBearingFilter] = useState('all'); // 'all', 'yes', 'no'
   const [alternateBearingYear, setAlternateBearingYear] = useState('');
+  const [cultivationTypeFilter, setCultivationTypeFilter] = useState('all');
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,9 +114,14 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
           );
       })();
 
-      return searchMatch && serviceMatch && supportMatch && alternateBearingMatch && projectMatch;
+      const cultivationTypeMatch = (() => {
+          if (cultivationTypeFilter === 'all') return true;
+          return farm.plots.some(p => p.cultivationType === cultivationTypeFilter);
+      })();
+
+      return searchMatch && serviceMatch && supportMatch && alternateBearingMatch && projectMatch && cultivationTypeMatch;
     });
-  }, [farms, debouncedSearchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear, projectFilter]);
+  }, [farms, debouncedSearchTerm, serviceFilter, supportFilter, supportYearStart, supportYearEnd, alternateBearingFilter, alternateBearingYear, projectFilter, cultivationTypeFilter]);
   
   const handleRestoreClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -213,6 +219,16 @@ const FarmList: React.FC<FarmListProps> = ({ farms, onEdit, onDelete, onAddNew, 
                             <option value="all">해거리 (전체)</option>
                             <option value="yes">해거리 발생 농가</option>
                             <option value="no">해거리 미발생 농가</option>
+                        </select>
+                        <select
+                            value={cultivationTypeFilter}
+                            onChange={(e) => setCultivationTypeFilter(e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                            aria-label="재배 형태 필터"
+                        >
+                            <option value="all">재배 형태 (전체)</option>
+                            <option value={CultivationType.OPEN_FIELD}>{CultivationType.OPEN_FIELD}</option>
+                            <option value={CultivationType.GREENHOUSE}>{CultivationType.GREENHOUSE}</option>
                         </select>
                     </div>
                      {supportFilter === 'yes' && (

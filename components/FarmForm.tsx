@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Farm, Plot, CoveringType, SupportProgram, AnnualData, CorporateFarmDetails, ConsultationLog, ConsultationCategory, PredefinedProjectName, FacilityInfo, ServiceInfo } from '../types';
+import { Farm, Plot, CoveringType, SupportProgram, AnnualData, CorporateFarmDetails, ConsultationLog, ConsultationCategory, PredefinedProjectName, FacilityInfo, ServiceInfo, CultivationType } from '../types';
 import { PlusIcon, TrashIcon, XIcon, PencilIcon } from './icons';
 
 interface FarmFormProps {
@@ -14,6 +14,7 @@ export const BLANK_PLOT: Omit<Plot, 'id'> = {
     cultivar: '',
     treeCount: 0,
     isCorporate: false,
+    cultivationType: CultivationType.OPEN_FIELD,
     facilityInfo: { slope: '', plantingDistance: '', hasCovering: false, coveringType: '', hasPower: false, hasInternet: false, hasUmbrellaSystem: false, hasDripHose: false, hasSprinkler: false, hasWindbreak: false, hasOpener: false },
     serviceInfo: { jacheongbiId: '', jacheongbiPw: '', useSugarService: false, sugarMeterInfo: '', useSensorService: false, sensorInfo: '' },
     annualData: [],
@@ -338,6 +339,19 @@ const PlotForm: React.FC<PlotFormProps> = ({ initialPlotData, onSave, onCancel }
                                 {renderInput('면적(평)', plotData.areaPyeong, e => handleChange('areaPyeong', parseInt(e.target.value) || 0), 'number')}
                                 {renderInput('품종', plotData.cultivar, e => handleChange('cultivar', e.target.value))}
                                 {renderInput('과수본수', plotData.treeCount, e => handleChange('treeCount', parseInt(e.target.value) || 0), 'number')}
+                            </div>
+                             <div className="mt-4">
+                                <label className="mb-1 font-medium text-gray-600 block">재배 형태</label>
+                                <div className="flex items-center space-x-4">
+                                    <label className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-100">
+                                        <input type="radio" name={`cultivationType-${plotData.id}`} value={CultivationType.OPEN_FIELD} checked={plotData.cultivationType === CultivationType.OPEN_FIELD} onChange={e => handleChange('cultivationType', e.target.value as CultivationType)} className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300" />
+                                        <span className="text-gray-700 font-medium">{CultivationType.OPEN_FIELD}</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-100">
+                                        <input type="radio" name={`cultivationType-${plotData.id}`} value={CultivationType.GREENHOUSE} checked={plotData.cultivationType === CultivationType.GREENHOUSE} onChange={e => handleChange('cultivationType', e.target.value as CultivationType)} className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300" />
+                                        <span className="text-gray-700 font-medium">{CultivationType.GREENHOUSE}</span>
+                                    </label>
+                                </div>
                             </div>
                         </fieldset>
                         <fieldset className="p-4 border rounded-md">

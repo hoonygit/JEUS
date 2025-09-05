@@ -114,6 +114,7 @@ const FarmDetails: React.FC<FarmDetailsProps> = ({ farm, onClose }) => {
                                         <DetailItem label="면적(평)">{selectedPlot.areaPyeong.toLocaleString()}</DetailItem>
                                         <DetailItem label="품종">{selectedPlot.cultivar || '-'}</DetailItem>
                                         <DetailItem label="과수본수">{selectedPlot.treeCount.toLocaleString()} 주</DetailItem>
+                                        <DetailItem label="재배 형태">{selectedPlot.cultivationType || '미지정'}</DetailItem>
                                     </div>
                                 </DetailSection>
                             </div>

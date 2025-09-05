@@ -1,5 +1,5 @@
 
-import { Farm, Plot, CoveringType, ConsultationCategory, FacilityInfo, ServiceInfo } from '../types';
+import { Farm, Plot, CoveringType, ConsultationCategory, FacilityInfo, ServiceInfo, CultivationType } from '../types';
 
 // 이 파일은 데이터 지속성을 관리하는 API 서비스 계층입니다.
 // 현재는 브라우저의 localStorage를 사용하여 데이터를 저장하지만,
@@ -29,6 +29,7 @@ const initialFarms: Farm[] = [
                 cultivar: '한라봉',
                 treeCount: 500,
                 isCorporate: false,
+                cultivationType: CultivationType.GREENHOUSE,
                 facilityInfo: { slope: '10도', plantingDistance: '5m x 3m', hasCovering: true, coveringType: CoveringType.TYVEK, hasPower: true, hasInternet: true, hasUmbrellaSystem: false, hasDripHose: true, hasSprinkler: true, hasWindbreak: true, hasOpener: true },
                 serviceInfo: { jacheongbiId: 'sunshine_farm', jacheongbiPw: 'password123', useSugarService: true, sugarMeterInfo: 'H-500 모델', useSensorService: true, sensorInfo: 'SKT 스마트팜' },
                 annualData: [
@@ -53,6 +54,7 @@ const initialFarms: Farm[] = [
                 cultivar: '천혜향',
                 treeCount: 400,
                 isCorporate: true,
+                cultivationType: CultivationType.OPEN_FIELD,
                 facilityInfo: { slope: '5도', plantingDistance: '4m x 3m', hasCovering: false, hasPower: true, hasInternet: false, hasUmbrellaSystem: false, hasDripHose: true, hasSprinkler: false, hasWindbreak: true, hasOpener: false },
                 serviceInfo: { jacheongbiId: 'oreum_farm', jacheongbiPw: 'password123', useSugarService: false, useSensorService: false },
                 annualData: [
@@ -102,6 +104,7 @@ const migrateData = (data: any[]): Farm[] => {
                 cultivar: newFarm.basicInfo.cultivar,
                 treeCount: newFarm.basicInfo.treeCount,
                 isCorporate: newFarm.basicInfo.isCorporate,
+                cultivationType: CultivationType.OPEN_FIELD,
                 facilityInfo: newFarm.facilityInfo || BLANK_FACILITY_INFO,
                 serviceInfo: newFarm.serviceInfo || BLANK_SERVICE_INFO,
                 annualData: newFarm.annualData || [],
@@ -157,6 +160,7 @@ const migrateData = (data: any[]): Farm[] => {
                  }
                  const defaults: Partial<Plot> = {
                     isCorporate: false,
+                    cultivationType: CultivationType.OPEN_FIELD,
                     supportPrograms: [],
                     consultationLogs: [],
                     annualData: [],
